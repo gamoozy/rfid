@@ -1,0 +1,29 @@
+# Python dependencies for Hybrid RFID-QR Attendance System
+# Optimized for Raspberry Pi A+ with Raspberry Pi OS Lite 32-bit
+# Install with: pip3 install -r requirements.txt
+
+# Web Framework
+flask==3.0.0
+flask-cors==4.0.0
+
+# QR Code Generation
+qrcode[pil]==7.4.2
+Pillow==10.1.0
+
+# Serial Communication (RFID Reader)
+pyserial>=3.5
+
+# Raspberry Pi GPIO (Servo Control)
+# Note: pigpio must be installed separately via apt on Raspberry Pi
+# System installation: sudo apt-get install pigpio python3-pigpio
+# Then start daemon: sudo pigpiod
+# This package provides Python bindings
+pigpio==1.78
+
+# Note for Pi A+ (ARMv6 32-bit):
+# - Installation may take 15-30 minutes due to single-core CPU
+# - Pillow compilation requires ~200MB free RAM (close other apps if needed)
+# - All packages are compatible with ARMv6 architecture
+
+# Utilities
+python-dateutil==2.8.2

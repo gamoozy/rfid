@@ -1,0 +1,534 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Classroom Attendance</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1e1e1e 0%, #2d2d2d 100%);
+            color: #ffffff;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .connection-status {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 10px 20px;
+            background: rgba(76, 175, 80, 0.2);
+            border: 2px solid #4CAF50;
+            border-radius: 20px;
+            font-size: 0.9em;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .connection-dot {
+            width: 10px;
+            height: 10px;
+            background: #4CAF50;
+            border-radius: 50%;
+            animation: blink 2s ease-in-out infinite;
+        }
+
+        @keyframes blink {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.3; }
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 20px;
+            padding: 20px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 15px;
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+        }
+
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 5px;
+            color: #4CAF50;
+            text-shadow: 0 0 20px rgba(76, 175, 80, 0.5);
+        }
+
+        .header .subtitle {
+            font-size: 1em;
+            color: #888;
+            margin-bottom: 10px;
+        }
+
+        .status {
+            font-size: 1.1em;
+            color: #888;
+            margin-top: 10px;
+        }
+
+        .servo-panel {
+            background: rgba(255, 255, 255, 0.05);
+            border: 2px solid rgba(100, 181, 246, 0.3);
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 20px;
+            max-width: 1200px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        .servo-info {
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 20px;
+        }
+
+        .servo-item {
+            text-align: center;
+        }
+
+        .servo-label {
+            color: #64B5F6;
+            font-size: 0.9em;
+            margin-bottom: 5px;
+        }
+
+        .servo-value {
+            font-size: 2em;
+            font-weight: bold;
+            color: #64B5F6;
+        }
+
+        .stats {
+            display: flex;
+            justify-content: center;
+            gap: 40px;
+            margin-bottom: 30px;
+            padding: 20px;
+            background: rgba(76, 175, 80, 0.1);
+            border-radius: 10px;
+            border: 2px solid rgba(76, 175, 80, 0.3);
+        }
+
+        .stat-item {
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 3em;
+            font-weight: bold;
+            color: #4CAF50;
+        }
+
+        .stat-label {
+            font-size: 1em;
+            color: #aaa;
+            margin-top: 5px;
+        }
+
+        .classroom-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            position: relative;
+        }
+
+        .classroom {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 15px;
+            padding: 20px;
+            background: rgba(255, 255, 255, 0.02);
+            border-radius: 10px;
+            border: 2px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .desk {
+            aspect-ratio: 1.2;
+            background: rgba(255, 255, 255, 0.05);
+            border: 3px solid rgba(255, 255, 255, 0.1);
+            border-radius: 15px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s ease;
+            cursor: pointer;
+            position: relative;
+            overflow: hidden;
+        }
+
+        /* Special theme for seats 1, 2, 3 - Blue/Cyan theme */
+        .desk.seat-active {
+            background: rgba(33, 150, 243, 0.15);
+            border: 3px solid rgba(33, 150, 243, 0.5);
+        }
+
+        .desk.seat-active .desk-number {
+            color: #42A5F5;
+        }
+
+        .desk.seat-active .desk-status {
+            color: #64B5F6;
+        }
+
+        .desk.seat-active:not(.verified):not(.scanning):hover {
+            background: rgba(33, 150, 243, 0.3);
+            border-color: rgba(33, 150, 243, 0.8);
+            transform: translateY(-3px);
+        }
+
+        .desk:not(.verified):not(.scanning):hover {
+            background: rgba(100, 181, 246, 0.2);
+            border-color: rgba(100, 181, 246, 0.5);
+            transform: translateY(-3px);
+        }
+
+        .desk-number {
+            font-size: 3em;
+            font-weight: bold;
+            color: #666;
+            margin-bottom: 10px;
+            transition: all 0.3s ease;
+        }
+
+        .desk-status {
+            font-size: 0.9em;
+            color: #555;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            transition: all 0.3s ease;
+        }
+
+        .desk.verified {
+            background: linear-gradient(135deg, #4CAF50 0%, #66BB6A 100%);
+            border-color: #81C784;
+            box-shadow: 0 0 30px rgba(76, 175, 80, 0.6);
+            animation: pulse 2s ease-in-out infinite;
+        }
+
+        .desk.scanning {
+            background: linear-gradient(135deg, #FFC107 0%, #FFD54F 100%);
+            border-color: #FFEB3B;
+            box-shadow: 0 0 30px rgba(255, 193, 7, 0.8);
+            animation: scanPulse 1s ease-in-out infinite;
+        }
+
+        .desk.verified .desk-number,
+        .desk.scanning .desk-number {
+            color: #ffffff;
+            text-shadow: 0 0 10px rgba(255, 255, 255, 0.5);
+        }
+
+        .desk.verified .desk-status,
+        .desk.scanning .desk-status {
+            color: #ffffff;
+        }
+
+        @keyframes pulse {
+            0%, 100% {
+                box-shadow: 0 0 30px rgba(76, 175, 80, 0.6);
+            }
+            50% {
+                box-shadow: 0 0 50px rgba(76, 175, 80, 0.9);
+            }
+        }
+
+        @keyframes scanPulse {
+            0%, 100% {
+                box-shadow: 0 0 30px rgba(255, 193, 7, 0.8);
+            }
+            50% {
+                box-shadow: 0 0 50px rgba(255, 193, 7, 1);
+            }
+        }
+
+        .reset-btn {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            padding: 15px 30px;
+            background: rgba(244, 67, 54, 0.8);
+            border: none;
+            border-radius: 10px;
+            color: white;
+            font-size: 1em;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+        }
+
+        .reset-btn:hover {
+            background: rgba(244, 67, 54, 1);
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4);
+        }
+
+        @media (max-width: 768px) {
+            .classroom {
+                grid-template-columns: repeat(3, 1fr);
+                gap: 10px;
+            }
+            
+            .desk-number {
+                font-size: 2em;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="connection-status">
+        <div class="connection-dot"></div>
+        <span>Live</span>
+    </div>
+
+    <div class="header">
+        <h1>🎓 Classroom Attendance</h1>
+        <div class="subtitle">
+            Seats 1-3: Tag blocked = Present | Tag visible = Absent<br>
+            Other seats: Click to scan RFID tag
+        </div>
+        <div class="status" id="status">Click on a seat to begin</div>
+    </div>
+
+    <div class="servo-panel">
+        <div class="servo-info">
+            <div class="servo-item">
+                <div class="servo-label">Servo X</div>
+                <div class="servo-value"><span id="servo-x">90</span>°</div>
+            </div>
+            <div class="servo-item">
+                <div class="servo-label">Servo Y</div>
+                <div class="servo-value"><span id="servo-y">90</span>°</div>
+            </div>
+            <div class="servo-item">
+                <div class="servo-label">Target</div>
+                <div class="servo-value" id="target-seat">--</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="stats">
+        <div class="stat-item">
+            <div class="stat-value" id="present-count">0</div>
+            <div class="stat-label">Present</div>
+        </div>
+        <div class="stat-item">
+            <div class="stat-value" id="total-count">20</div>
+            <div class="stat-label">Total Seats</div>
+        </div>
+        <div class="stat-item">
+            <div class="stat-value" id="percentage">0%</div>
+            <div class="stat-label">Attendance</div>
+        </div>
+    </div>
+
+    <div class="classroom-container">
+        <div class="classroom" id="classroom"></div>
+    </div>
+
+    <button class="reset-btn" onclick="resetAttendance()">🔄 Reset</button>
+
+    <script>
+        const totalSeats = 20;
+        const verifiedSeats = new Set();
+
+        function initializeClassroom() {
+            const classroom = document.getElementById('classroom');
+            classroom.innerHTML = '';
+            
+            // Create 20 numbered seats
+            for (let i = 1; i <= totalSeats; i++) {
+                const seatId = String(i);
+                const desk = document.createElement('div');
+                desk.className = 'desk';
+                
+                // Add special class for seats 1, 2, 3
+                if (i >= 1 && i <= 3) {
+                    desk.classList.add('seat-active');
+                }
+                
+                desk.id = `seat-${seatId}`;
+                desk.innerHTML = `
+                    <div class="desk-number">${seatId}</div>
+                    <div class="desk-status">Available</div>
+                `;
+                desk.addEventListener('click', () => handleSeatClick(seatId));
+                classroom.appendChild(desk);
+            }
+        }
+        
+        async function handleSeatClick(seatId) {
+            const desk = document.getElementById(`seat-${seatId}`);
+            if (desk.classList.contains('verified') || desk.classList.contains('scanning')) {
+                return;
+            }
+            
+            // Different confirmation message for inverse logic seats (1, 2, 3)
+            const isInverse = ['1', '2', '3'].includes(seatId);
+            let confirmMsg;
+            if (isInverse) {
+                confirmMsg = `Check seat ${seatId}?\n\n🔄 INVERSE LOGIC:\n• Tag detected = Student ABSENT (chair empty)\n• Tag blocked = Student PRESENT (sitting)`;
+            } else {
+                confirmMsg = `Select seat ${seatId}?\n\nAfter clicking OK, place your RFID tag at the reader.`;
+            }
+            
+            if (!confirm(confirmMsg)) {
+                return;
+            }
+            
+            try {
+                updateDesk(seatId, 'scanning');
+                if (isInverse) {
+                    updateStatus(`Checking seat ${seatId} (inverse logic)...`);
+                } else {
+                    updateStatus(`Moving servos to seat ${seatId}...`);
+                }
+                
+                const response = await fetch('/api/attendance/claim', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({seat_id: seatId})
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    if (data.inverse_logic) {
+                        if (data.status === 'present') {
+                            updateDesk(seatId, 'verified');
+                            updateStatus(`✓ Seat ${seatId}: Student PRESENT (tag blocked)`);
+                        } else {
+                            updateDesk(seatId, 'empty');
+                            updateStatus(`✗ Seat ${seatId}: Student ABSENT (tag visible)`);
+                        }
+                    } else {
+                        updateDesk(seatId, 'verified');
+                        updateStatus(`✓ ${seatId} verified!`);
+                    }
+                } else {
+                    updateDesk(seatId, 'empty');
+                    updateStatus(`❌ ${data.message || 'Verification failed'}`);
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                updateDesk(seatId, 'empty');
+                updateStatus('❌ Error - Try again');
+            }
+        }
+
+        function updateDesk(seatId, state) {
+            const desk = document.getElementById(`seat-${seatId}`);
+            if (!desk) return;
+
+            desk.classList.remove('verified', 'scanning');
+
+            if (state === 'verified') {
+                desk.classList.add('verified');
+                desk.querySelector('.desk-status').textContent = '✓ Verified';
+                verifiedSeats.add(seatId);
+            } else if (state === 'scanning') {
+                desk.classList.add('scanning');
+                desk.querySelector('.desk-status').textContent = '⏳ Scanning...';
+            } else {
+                desk.querySelector('.desk-status').textContent = 'Available';
+            }
+        }
+
+        function updateServoDisplay(x, y, targetSeat) {
+            document.getElementById('servo-x').textContent = x;
+            document.getElementById('servo-y').textContent = y;
+            document.getElementById('target-seat').textContent = targetSeat || '--';
+        }
+
+        function updateStats() {
+            const present = verifiedSeats.size;
+            const percentage = Math.round((present / totalSeats) * 100);
+            document.getElementById('present-count').textContent = present;
+            document.getElementById('percentage').textContent = percentage + '%';
+        }
+
+        function updateStatus(message) {
+            const now = new Date().toLocaleTimeString();
+            document.getElementById('status').textContent = `[${now}] ${message}`;
+        }
+
+        async function updateClassroomState() {
+            try {
+                const response = await fetch('/api/classroom/state');
+                const data = await response.json();
+                
+                if (data.servo_position) {
+                    updateServoDisplay(
+                        data.servo_position.x,
+                        data.servo_position.y,
+                        data.scanning_seat
+                    );
+                }
+
+                // Update all seats
+                for (let i = 1; i <= totalSeats; i++) {
+                    const seatId = String(i);
+                    if (!verifiedSeats.has(seatId)) {
+                        updateDesk(seatId, 'empty');
+                    }
+                }
+
+                if (data.attendance) {
+                    for (const [seatId] of Object.entries(data.attendance)) {
+                        updateDesk(seatId, 'verified');
+                    }
+                }
+
+                if (data.scanning_seat) {
+                    updateDesk(data.scanning_seat, 'scanning');
+                    updateStatus(`Scanning ${data.scanning_seat}...`);
+                }
+
+                updateStats();
+            } catch (error) {
+                console.error('Error:', error);
+            }
+        }
+
+        async function updateServoPositionOnly() {
+            try {
+                const response = await fetch('/api/servo/position');
+                const data = await response.json();
+                updateServoDisplay(data.x, data.y, data.target_seat);
+            } catch (error) {
+                console.debug('Servo position update error:', error);
+            }
+        }
+
+        async function resetAttendance() {
+            if (confirm('Reset attendance?')) {
+                try {
+                    await fetch('/api/reset');
+                    verifiedSeats.clear();
+                    initializeClassroom();
+                    updateStats();
+                    updateServoDisplay(90, 90, null);
+                    updateStatus('Session reset');
+                } catch (error) {
+                    console.error('Error:', error);
+                }
+            }
+        }
+
+        initializeClassroom();
+        setInterval(updateClassroomState, 300);
+        setInterval(updateServoPositionOnly, 100);  // Update servo position faster (10 times/sec)
+        updateClassroomState();
+    </script>
+</body>
+</html>
