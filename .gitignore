@@ -1,0 +1,28 @@
+# Virtual environments
+Reader_venv/
+venv/
+.venv/
+*.zip
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+dist/
+build/
+
+# Database & logs (auto-generated at runtime)
+rfid_scans.db
+rfid_scans.csv
+
+# Runtime state files
+stepper_position.json
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
