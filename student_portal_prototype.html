@@ -1,0 +1,1383 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Smart Attendance — Student Portal Prototype</title>
+    <style>
+        /* ===== DESIGN TOKENS ===== */
+        :root {
+            --primary: #4CAF50;
+            --primary-dark: #388E3C;
+            --primary-light: #81C784;
+            --secondary: #2196F3;
+            --secondary-light: #64B5F6;
+            --warning: #FFC107;
+            --warning-dark: #FFA000;
+            --error: #F44336;
+            --bg: #121212;
+            --surface: #1E1E1E;
+            --surface2: #2D2D2D;
+            --surface3: #383838;
+            --text: #FFFFFF;
+            --text-secondary: #AAAAAA;
+            --text-muted: #666666;
+            --radius-sm: 8px;
+            --radius-md: 12px;
+            --radius-lg: 16px;
+            --radius-xl: 24px;
+            --radius-full: 9999px;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: -apple-system, 'SF Pro Display', 'Inter', 'Segoe UI', sans-serif;
+            background: #000;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            min-height: 100vh;
+            padding: 20px;
+            color: var(--text);
+        }
+
+        /* ===== PHONE FRAME ===== */
+        .phone-frame {
+            width: 375px;
+            height: 812px;
+            background: var(--bg);
+            border-radius: 40px;
+            overflow: hidden;
+            position: relative;
+            box-shadow: 0 0 0 3px #333, 0 0 60px rgba(0,0,0,0.8);
+        }
+
+        .notch {
+            position: absolute;
+            top: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 150px;
+            height: 30px;
+            background: #000;
+            border-radius: 0 0 20px 20px;
+            z-index: 100;
+        }
+
+        .status-bar {
+            height: 50px;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+            padding: 0 25px 5px;
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--text);
+            position: relative;
+            z-index: 99;
+        }
+
+        /* ===== SCREENS ===== */
+        .screen {
+            display: none;
+            height: 762px;
+            overflow-y: auto;
+            position: relative;
+        }
+        .screen.active { display: flex; flex-direction: column; }
+        .screen::-webkit-scrollbar { display: none; }
+
+        /* ===== PAGE NAV (bottom) ===== */
+        .page-nav {
+            position: fixed;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 6px;
+            background: rgba(30,30,30,0.95);
+            padding: 8px 16px;
+            border-radius: var(--radius-full);
+            z-index: 200;
+            backdrop-filter: blur(10px);
+            border: 1px solid #333;
+        }
+        .page-nav button {
+            width: 28px; height: 28px;
+            border-radius: 50%;
+            border: 2px solid #444;
+            background: transparent;
+            color: #888;
+            font-size: 11px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .page-nav button.active {
+            background: var(--primary);
+            border-color: var(--primary);
+            color: #fff;
+        }
+        .page-nav button:hover { border-color: var(--primary-light); color: #fff; }
+
+        /* ===== SHARED COMPONENTS ===== */
+        .top-bar {
+            display: flex;
+            align-items: center;
+            padding: 10px 20px;
+            gap: 12px;
+        }
+        .top-bar .back {
+            width: 36px; height: 36px;
+            border-radius: 50%;
+            background: var(--surface2);
+            border: none;
+            color: var(--text);
+            font-size: 18px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .top-bar .title {
+            font-size: 18px;
+            font-weight: 700;
+        }
+
+        .btn {
+            display: block;
+            width: 100%;
+            padding: 16px;
+            border: none;
+            border-radius: var(--radius-xl);
+            font-size: 16px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.2s;
+            text-align: center;
+        }
+        .btn-primary { background: var(--primary); color: #fff; }
+        .btn-primary:hover { background: var(--primary-dark); transform: translateY(-1px); }
+        .btn-primary:disabled { background: #333; color: #666; cursor: not-allowed; transform: none; }
+        .btn-secondary { background: var(--surface2); color: var(--text); border: 2px solid #444; }
+        .btn-secondary:hover { border-color: var(--secondary); }
+        .btn-blue { background: var(--secondary); color: #fff; }
+
+        .card {
+            background: var(--surface);
+            border-radius: var(--radius-lg);
+            padding: 20px;
+            border: 1px solid #2a2a2a;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: var(--radius-full);
+            font-size: 12px;
+            font-weight: 600;
+        }
+        .badge-green { background: rgba(76,175,80,0.2); color: var(--primary); }
+        .badge-blue { background: rgba(33,150,243,0.2); color: var(--secondary); }
+        .badge-amber { background: rgba(255,193,7,0.2); color: var(--warning); }
+
+        .input-field {
+            width: 100%;
+            padding: 16px 20px;
+            background: var(--surface2);
+            border: 2px solid #444;
+            border-radius: var(--radius-md);
+            color: var(--text);
+            font-size: 16px;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+        .input-field:focus { border-color: var(--secondary); }
+        .input-field::placeholder { color: var(--text-muted); }
+
+        .input-label {
+            font-size: 13px;
+            color: var(--text-secondary);
+            margin-bottom: 8px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        /* ===== PAGE 1: SPLASH ===== */
+        #splash {
+            justify-content: center;
+            align-items: center;
+            background: radial-gradient(circle at 50% 40%, rgba(76,175,80,0.15) 0%, var(--bg) 70%);
+        }
+        #splash .logo {
+            width: 100px; height: 100px;
+            background: var(--primary);
+            border-radius: 28px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 48px;
+            margin-bottom: 30px;
+            box-shadow: 0 0 60px rgba(76,175,80,0.4);
+            animation: logoPulse 2s ease-in-out infinite;
+        }
+        @keyframes logoPulse {
+            0%, 100% { box-shadow: 0 0 30px rgba(76,175,80,0.3); transform: scale(1); }
+            50% { box-shadow: 0 0 60px rgba(76,175,80,0.6); transform: scale(1.03); }
+        }
+        #splash h1 {
+            font-size: 32px;
+            font-weight: 800;
+            letter-spacing: -0.5px;
+            margin-bottom: 8px;
+        }
+        #splash .tagline {
+            color: var(--text-secondary);
+            font-size: 16px;
+            margin-bottom: 60px;
+        }
+        #splash .grid-bg {
+            position: absolute;
+            inset: 0;
+            background-image:
+                linear-gradient(rgba(76,175,80,0.05) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(76,175,80,0.05) 1px, transparent 1px);
+            background-size: 40px 40px;
+            pointer-events: none;
+        }
+        #splash .cta { width: 260px; }
+
+        /* ===== PAGE 2: LOGIN ===== */
+        #login { padding: 20px; }
+        #login .login-header {
+            text-align: center;
+            margin: 20px 0 40px;
+        }
+        #login .login-header .icon {
+            width: 64px; height: 64px;
+            background: rgba(33,150,243,0.15);
+            border-radius: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 32px;
+            margin: 0 auto 16px;
+        }
+        #login .form-group { margin-bottom: 20px; }
+        #login .remember-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin: 20px 0 40px;
+        }
+        .toggle {
+            width: 48px; height: 26px;
+            background: #444;
+            border-radius: 13px;
+            position: relative;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        .toggle.on { background: var(--primary); }
+        .toggle::after {
+            content: '';
+            position: absolute;
+            width: 22px; height: 22px;
+            background: #fff;
+            border-radius: 50%;
+            top: 2px; left: 2px;
+            transition: transform 0.2s;
+        }
+        .toggle.on::after { transform: translateX(22px); }
+
+        /* ===== PAGE 3: QR SCANNER ===== */
+        #qr-scan { background: #0a0a0a; }
+        .scanner-area {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        .viewfinder {
+            width: 280px; height: 280px;
+            position: relative;
+            margin-bottom: 30px;
+        }
+        .viewfinder-bg {
+            width: 100%; height: 100%;
+            background: rgba(255,255,255,0.03);
+            border-radius: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            position: relative;
+        }
+        .viewfinder-bg .scan-line {
+            position: absolute;
+            width: 90%;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, var(--primary), transparent);
+            animation: scanDown 2s ease-in-out infinite;
+            box-shadow: 0 0 15px rgba(76,175,80,0.6);
+        }
+        @keyframes scanDown {
+            0%, 100% { top: 10%; }
+            50% { top: 85%; }
+        }
+        .viewfinder-bg .qr-ghost {
+            font-size: 80px;
+            opacity: 0.15;
+        }
+        .corner {
+            position: absolute;
+            width: 30px; height: 30px;
+            border-color: var(--primary);
+            border-style: solid;
+        }
+        .corner.tl { top: -2px; left: -2px; border-width: 4px 0 0 4px; border-radius: 8px 0 0 0; }
+        .corner.tr { top: -2px; right: -2px; border-width: 4px 4px 0 0; border-radius: 0 8px 0 0; }
+        .corner.bl { bottom: -2px; left: -2px; border-width: 0 0 4px 4px; border-radius: 0 0 0 8px; }
+        .corner.br { bottom: -2px; right: -2px; border-width: 0 4px 4px 0; border-radius: 0 0 8px 0; }
+        .scan-instructions {
+            text-align: center;
+            color: var(--text-secondary);
+            font-size: 15px;
+            line-height: 1.5;
+        }
+        .scan-instructions .icon-row {
+            font-size: 28px;
+            margin-bottom: 8px;
+        }
+        .manual-link {
+            color: var(--secondary);
+            font-size: 14px;
+            margin-top: 20px;
+            cursor: pointer;
+            text-decoration: underline;
+        }
+
+        /* QR state overlays */
+        .qr-overlay {
+            position: absolute;
+            inset: 0;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+            gap: 12px;
+            border-radius: 20px;
+            z-index: 10;
+        }
+        .qr-overlay.success-overlay { background: rgba(76,175,80,0.25); border: 3px solid var(--primary); }
+        .qr-overlay.error-overlay { background: rgba(244,67,54,0.2); border: 3px solid var(--error); }
+        .qr-overlay .overlay-icon { font-size: 60px; }
+        .qr-overlay .overlay-text { font-size: 14px; font-weight: 600; }
+
+        /* ===== PAGE 4: SESSION CONFIRMED ===== */
+        #session-confirm { padding: 20px; }
+        .success-banner {
+            background: rgba(76,175,80,0.15);
+            border: 2px solid rgba(76,175,80,0.4);
+            border-radius: var(--radius-lg);
+            padding: 20px;
+            text-align: center;
+            margin-bottom: 24px;
+        }
+        .success-banner .icon { font-size: 48px; margin-bottom: 8px; }
+        .success-banner h2 { color: var(--primary); font-size: 22px; }
+
+        .session-detail-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 12px 0;
+            border-bottom: 1px solid #2a2a2a;
+        }
+        .session-detail-row:last-child { border-bottom: none; }
+        .session-detail-row .label { color: var(--text-secondary); font-size: 14px; }
+        .session-detail-row .value { font-weight: 600; font-size: 14px; }
+
+        .countdown-ring {
+            width: 80px; height: 80px;
+            border-radius: 50%;
+            border: 4px solid var(--surface2);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 20px;
+            position: relative;
+        }
+        .countdown-ring::before {
+            content: '';
+            position: absolute;
+            inset: -4px;
+            border-radius: 50%;
+            border: 4px solid transparent;
+            border-top-color: var(--primary);
+            animation: spin 3s linear infinite;
+        }
+        @keyframes spin { 100% { transform: rotate(360deg); } }
+        .countdown-ring .time { font-size: 20px; font-weight: 800; color: var(--primary); }
+
+        /* ===== PAGE 5: SEAT MAP ===== */
+        #seat-map { padding: 0; }
+        .seat-map-header {
+            padding: 10px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .front-label {
+            text-align: center;
+            padding: 8px;
+            background: var(--surface2);
+            color: var(--text-muted);
+            font-size: 12px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            margin: 0 20px 8px;
+            border-radius: var(--radius-sm);
+        }
+        .seat-grid {
+            display: grid;
+            grid-template-columns: 30px repeat(5, 1fr);
+            gap: 8px;
+            padding: 8px 12px;
+        }
+        .row-label {
+            font-size: 14px;
+            font-weight: 800;
+            color: var(--text-muted);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .seat {
+            aspect-ratio: 1;
+            border-radius: var(--radius-md);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.25s;
+            border: 2px solid;
+            position: relative;
+        }
+        .seat .seat-id { font-size: 16px; font-weight: 800; }
+        .seat .seat-label { font-size: 8px; text-transform: uppercase; letter-spacing: 0.5px; margin-top: 2px; font-weight: 600; }
+
+        /* Seat states */
+        .seat.available { background: var(--surface2); border-color: #444; }
+        .seat.available .seat-id { color: #888; }
+        .seat.available .seat-label { color: #666; }
+        .seat.available:hover { border-color: var(--secondary-light); background: rgba(33,150,243,0.1); transform: translateY(-2px); }
+
+        .seat.selected { background: rgba(33,150,243,0.2); border-color: var(--secondary); box-shadow: 0 0 20px rgba(33,150,243,0.3); }
+        .seat.selected .seat-id { color: var(--secondary-light); }
+        .seat.selected .seat-label { color: var(--secondary); }
+
+        .seat.occupied { background: rgba(93,58,58,0.5); border-color: rgba(244,67,54,0.3); cursor: not-allowed; }
+        .seat.occupied .seat-id { color: #aa6666; }
+        .seat.occupied .seat-label { color: #885555; }
+        .seat.occupied::after { content: '🔒'; position: absolute; top: 4px; right: 4px; font-size: 10px; }
+
+        .seat.scanning { background: rgba(255,193,7,0.2); border-color: var(--warning); animation: seatScan 1s ease-in-out infinite; }
+        .seat.scanning .seat-id { color: var(--warning); }
+        .seat.scanning .seat-label { color: var(--warning-dark); }
+        @keyframes seatScan {
+            0%, 100% { box-shadow: 0 0 15px rgba(255,193,7,0.3); }
+            50% { box-shadow: 0 0 30px rgba(255,193,7,0.6); }
+        }
+
+        .seat.verified-mine { background: linear-gradient(135deg, rgba(76,175,80,0.3), rgba(76,175,80,0.15)); border-color: var(--primary); box-shadow: 0 0 25px rgba(76,175,80,0.4); }
+        .seat.verified-mine .seat-id { color: #fff; }
+        .seat.verified-mine .seat-label { color: var(--primary-light); }
+        .seat.verified-mine::after { content: '✓'; position: absolute; top: 4px; right: 6px; font-size: 12px; color: var(--primary); font-weight: 800; }
+
+        .seat.verified-other { background: rgba(46,95,46,0.3); border-color: rgba(76,175,80,0.25); cursor: not-allowed; }
+        .seat.verified-other .seat-id { color: #5a8a5a; }
+        .seat.verified-other .seat-label { color: #4a7a4a; }
+        .seat.verified-other::after { content: '✓'; position: absolute; top: 4px; right: 6px; font-size: 10px; color: #5a8a5a; }
+
+        .seat-legend {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            padding: 10px 20px;
+            justify-content: center;
+        }
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 10px;
+            color: var(--text-secondary);
+        }
+        .legend-dot {
+            width: 10px; height: 10px;
+            border-radius: 3px;
+        }
+
+        .live-stats {
+            display: flex;
+            justify-content: space-around;
+            padding: 12px 20px;
+            background: rgba(76,175,80,0.08);
+            border-top: 1px solid rgba(76,175,80,0.2);
+            border-bottom: 1px solid rgba(76,175,80,0.2);
+            margin: 8px 0;
+        }
+        .live-stat { text-align: center; }
+        .live-stat .num { font-size: 24px; font-weight: 800; color: var(--primary); }
+        .live-stat .lbl { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
+
+        /* Bottom sheet */
+        .bottom-sheet {
+            position: absolute;
+            bottom: 0; left: 0; right: 0;
+            background: var(--surface);
+            border-radius: 24px 24px 0 0;
+            padding: 20px;
+            transform: translateY(100%);
+            transition: transform 0.3s ease;
+            z-index: 50;
+            border-top: 1px solid #333;
+            box-shadow: 0 -10px 40px rgba(0,0,0,0.5);
+        }
+        .bottom-sheet.open { transform: translateY(0); }
+        .bottom-sheet .handle {
+            width: 40px; height: 4px;
+            background: #555;
+            border-radius: 2px;
+            margin: 0 auto 16px;
+        }
+        .bottom-sheet h3 { font-size: 18px; margin-bottom: 4px; }
+        .bottom-sheet .sheet-sub { color: var(--text-secondary); font-size: 14px; margin-bottom: 20px; }
+        .bottom-sheet .btn { margin-top: 8px; }
+
+        /* ===== PAGE 6: RFID VERIFICATION ===== */
+        #rfid-verify {
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            text-align: center;
+        }
+        .radar-container {
+            width: 200px; height: 200px;
+            position: relative;
+            margin: 20px auto;
+        }
+        .radar-ring {
+            position: absolute;
+            border-radius: 50%;
+            border: 2px solid rgba(76,175,80,0.2);
+        }
+        .radar-ring.r1 { inset: 0; animation: radarPulse 2s ease-out infinite; }
+        .radar-ring.r2 { inset: 20px; animation: radarPulse 2s ease-out 0.4s infinite; }
+        .radar-ring.r3 { inset: 40px; animation: radarPulse 2s ease-out 0.8s infinite; }
+        @keyframes radarPulse {
+            0% { border-color: rgba(76,175,80,0.5); transform: scale(0.95); }
+            100% { border-color: rgba(76,175,80,0); transform: scale(1.15); }
+        }
+        .radar-center {
+            position: absolute;
+            inset: 60px;
+            background: rgba(76,175,80,0.15);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 40px;
+            border: 3px solid rgba(76,175,80,0.4);
+        }
+        .verify-seat-info {
+            font-size: 14px;
+            color: var(--text-secondary);
+            margin-bottom: 8px;
+        }
+        .verify-seat-id {
+            font-size: 48px;
+            font-weight: 900;
+            color: var(--primary);
+            margin-bottom: 20px;
+        }
+        .servo-readout {
+            display: flex;
+            gap: 24px;
+            justify-content: center;
+            margin-bottom: 24px;
+        }
+        .servo-val {
+            text-align: center;
+        }
+        .servo-val .angle { font-size: 28px; font-weight: 800; color: var(--secondary-light); }
+        .servo-val .axis { font-size: 11px; color: var(--text-muted); margin-top: 4px; }
+        .verify-status {
+            color: var(--warning);
+            font-size: 15px;
+            font-weight: 600;
+            margin-bottom: 24px;
+            min-height: 24px;
+        }
+        .countdown-bar {
+            width: 100%;
+            height: 6px;
+            background: var(--surface2);
+            border-radius: 3px;
+            overflow: hidden;
+            margin-bottom: 16px;
+        }
+        .countdown-bar .fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--primary), var(--warning));
+            border-radius: 3px;
+            animation: countDown 5s linear forwards;
+        }
+        @keyframes countDown {
+            0% { width: 100%; }
+            100% { width: 0%; }
+        }
+        .countdown-label {
+            font-size: 13px;
+            color: var(--text-muted);
+            margin-bottom: 30px;
+        }
+
+        /* ===== PAGE 7: SUCCESS ===== */
+        #success {
+            align-items: center;
+            justify-content: center;
+            padding: 30px;
+            text-align: center;
+            background: radial-gradient(circle at 50% 35%, rgba(76,175,80,0.12) 0%, var(--bg) 70%);
+        }
+        .success-check {
+            width: 120px; height: 120px;
+            border-radius: 50%;
+            background: var(--primary);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 64px;
+            margin-bottom: 24px;
+            box-shadow: 0 0 60px rgba(76,175,80,0.5);
+            animation: successPop 0.6s ease-out;
+        }
+        @keyframes successPop {
+            0% { transform: scale(0); opacity: 0; }
+            60% { transform: scale(1.1); }
+            100% { transform: scale(1); opacity: 1; }
+        }
+        #success h1 {
+            font-size: 28px;
+            margin-bottom: 8px;
+            color: var(--primary);
+        }
+        #success .sub { color: var(--text-secondary); margin-bottom: 30px; }
+        .receipt-card {
+            width: 100%;
+            background: var(--surface);
+            border-radius: var(--radius-lg);
+            padding: 20px;
+            border: 1px solid #2a2a2a;
+            text-align: left;
+            margin-bottom: 30px;
+        }
+        .receipt-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 10px 0;
+            border-bottom: 1px solid #222;
+            font-size: 14px;
+        }
+        .receipt-row:last-child { border: none; }
+        .receipt-row .rlbl { color: var(--text-secondary); }
+        .receipt-row .rval { font-weight: 600; }
+
+        .confetti {
+            position: absolute;
+            top: 0; left: 0; right: 0;
+            height: 300px;
+            pointer-events: none;
+            overflow: hidden;
+        }
+        .confetti span {
+            position: absolute;
+            width: 8px;
+            height: 8px;
+            border-radius: 2px;
+            animation: confettiFall 3s ease-in forwards;
+        }
+        @keyframes confettiFall {
+            0% { transform: translateY(-20px) rotate(0deg); opacity: 1; }
+            100% { transform: translateY(300px) rotate(720deg); opacity: 0; }
+        }
+
+        /* ===== PAGE 8: DASHBOARD ===== */
+        #dashboard { padding: 20px; }
+        #dashboard .dash-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        #dashboard .dash-header h2 { font-size: 24px; }
+        .avatar {
+            width: 40px; height: 40px;
+            border-radius: 50%;
+            background: var(--secondary);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+            font-weight: 700;
+        }
+        .current-session-card {
+            background: linear-gradient(135deg, rgba(76,175,80,0.15), rgba(76,175,80,0.05));
+            border: 2px solid rgba(76,175,80,0.3);
+            border-radius: var(--radius-lg);
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        .current-session-card .cs-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+        .current-session-card .cs-course { font-size: 20px; font-weight: 800; }
+        .donut-container {
+            width: 100%;
+            display: flex;
+            justify-content: center;
+            margin: 12px 0 20px;
+        }
+        .donut {
+            width: 100px; height: 100px;
+            border-radius: 50%;
+            background: conic-gradient(var(--primary) 0% 85%, var(--surface2) 85% 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+        }
+        .donut::after {
+            content: '';
+            width: 70px; height: 70px;
+            background: var(--bg);
+            border-radius: 50%;
+            position: absolute;
+        }
+        .donut .pct {
+            position: relative;
+            z-index: 1;
+            font-size: 22px;
+            font-weight: 800;
+            color: var(--primary);
+        }
+        .history-title {
+            font-size: 16px;
+            font-weight: 700;
+            margin-bottom: 12px;
+            color: var(--text-secondary);
+        }
+        .history-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 14px;
+            background: var(--surface);
+            border-radius: var(--radius-md);
+            margin-bottom: 8px;
+            border: 1px solid #2a2a2a;
+        }
+        .history-item .hi-icon {
+            width: 36px; height: 36px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+            flex-shrink: 0;
+        }
+        .hi-icon.present { background: rgba(76,175,80,0.15); }
+        .hi-icon.absent { background: rgba(244,67,54,0.15); }
+        .history-item .hi-info { flex: 1; }
+        .hi-info .hi-course { font-size: 14px; font-weight: 600; }
+        .hi-info .hi-meta { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
+        .hi-seat { font-size: 13px; font-weight: 600; color: var(--text-muted); }
+
+        /* ===== PAGE 9: ERRORS ===== */
+        #errors { padding: 20px; }
+        .error-demo-grid {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+        .error-card {
+            border-radius: var(--radius-md);
+            padding: 16px;
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            border: 1px solid;
+        }
+        .error-card .ec-icon {
+            width: 44px; height: 44px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 22px;
+            flex-shrink: 0;
+        }
+        .error-card .ec-title { font-size: 14px; font-weight: 700; margin-bottom: 2px; }
+        .error-card .ec-desc { font-size: 12px; color: var(--text-secondary); line-height: 1.4; }
+
+        .ec-expired { background: rgba(244,67,54,0.08); border-color: rgba(244,67,54,0.3); }
+        .ec-expired .ec-icon { background: rgba(244,67,54,0.15); }
+        .ec-already { background: rgba(33,150,243,0.08); border-color: rgba(33,150,243,0.3); }
+        .ec-already .ec-icon { background: rgba(33,150,243,0.15); }
+        .ec-busy { background: rgba(255,193,7,0.08); border-color: rgba(255,193,7,0.3); }
+        .ec-busy .ec-icon { background: rgba(255,193,7,0.15); }
+        .ec-taken { background: rgba(244,67,54,0.08); border-color: rgba(244,67,54,0.3); }
+        .ec-taken .ec-icon { background: rgba(244,67,54,0.15); }
+        .ec-hw { background: rgba(255,152,0,0.08); border-color: rgba(255,152,0,0.3); }
+        .ec-hw .ec-icon { background: rgba(255,152,0,0.15); }
+        .ec-net { background: rgba(120,120,120,0.08); border-color: rgba(120,120,120,0.3); }
+        .ec-net .ec-icon { background: rgba(120,120,120,0.15); }
+    </style>
+</head>
+<body>
+
+<div class="phone-frame">
+    <div class="notch"></div>
+    <div class="status-bar">
+        <span>9:41</span>
+        <span>●●●● WiFi 🔋</span>
+    </div>
+
+    <!-- ========== PAGE 1: SPLASH ========== -->
+    <div class="screen active" id="splash">
+        <div class="grid-bg"></div>
+        <div class="logo">🎓</div>
+        <h1>Smart Attendance</h1>
+        <div class="tagline">Scan. Sit. Verified.</div>
+        <button class="btn btn-primary cta" onclick="goTo('login')">Get Started</button>
+    </div>
+
+    <!-- ========== PAGE 2: LOGIN ========== -->
+    <div class="screen" id="login">
+        <div class="top-bar">
+            <button class="back" onclick="goTo('splash')">←</button>
+            <span class="title">Sign In</span>
+        </div>
+        <div style="padding: 0 20px; flex:1;">
+            <div class="login-header">
+                <div class="icon">👤</div>
+                <h2>Welcome, Student</h2>
+                <p style="color:var(--text-secondary); font-size:14px; margin-top:8px;">Enter your student ID to continue</p>
+            </div>
+            <div class="form-group">
+                <div class="input-label">Student ID</div>
+                <input class="input-field" type="text" placeholder="e.g. STU-20231234" id="studentIdInput">
+            </div>
+            <div class="form-group">
+                <div class="input-label">Full Name (optional)</div>
+                <input class="input-field" type="text" placeholder="e.g. Ahmed Al-Rashid">
+            </div>
+            <div class="remember-row">
+                <span style="font-size:14px; color:var(--text-secondary);">Remember me</span>
+                <div class="toggle on" onclick="this.classList.toggle('on')"></div>
+            </div>
+            <button class="btn btn-primary" onclick="goTo('qr-scan')">Continue</button>
+            <p style="text-align:center; margin-top:20px; font-size:12px; color:var(--text-muted);">
+                By continuing you agree to the attendance policy
+            </p>
+        </div>
+    </div>
+
+    <!-- ========== PAGE 3: QR SCANNER ========== -->
+    <div class="screen" id="qr-scan">
+        <div class="top-bar">
+            <button class="back" onclick="goTo('login')">←</button>
+            <span class="title" style="color:#fff;">Scan QR Code</span>
+        </div>
+        <div class="scanner-area">
+            <div class="viewfinder">
+                <div class="corner tl"></div>
+                <div class="corner tr"></div>
+                <div class="corner bl"></div>
+                <div class="corner br"></div>
+                <div class="viewfinder-bg">
+                    <div class="scan-line"></div>
+                    <div class="qr-ghost">▣</div>
+                </div>
+                <!-- Success overlay -->
+                <div class="qr-overlay success-overlay" id="qrSuccess">
+                    <div class="overlay-icon">✅</div>
+                    <div class="overlay-text" style="color:var(--primary);">Session Found!</div>
+                </div>
+                <!-- Error overlay -->
+                <div class="qr-overlay error-overlay" id="qrError">
+                    <div class="overlay-icon">❌</div>
+                    <div class="overlay-text" style="color:var(--error);">QR Expired</div>
+                </div>
+            </div>
+            <div class="scan-instructions">
+                <div class="icon-row">📱 → 📷 → ▣</div>
+                Point your camera at the QR code<br>displayed by your teacher
+            </div>
+            <div class="manual-link">Enter code manually</div>
+        </div>
+        <div style="padding: 16px 20px;">
+            <button class="btn btn-primary" onclick="simulateQrScan()">Simulate: QR Detected ✓</button>
+            <button class="btn btn-secondary" style="margin-top:8px;" onclick="simulateQrError()">Simulate: QR Expired ✗</button>
+        </div>
+    </div>
+
+    <!-- ========== PAGE 4: SESSION CONFIRMED ========== -->
+    <div class="screen" id="session-confirm">
+        <div class="top-bar">
+            <button class="back" onclick="goTo('qr-scan')">←</button>
+            <span class="title">Session Details</span>
+        </div>
+        <div style="padding: 0 20px; flex:1;">
+            <div class="success-banner">
+                <div class="icon">✅</div>
+                <h2>Session Joined!</h2>
+                <p style="color:var(--text-secondary); font-size:13px; margin-top:4px;">You're connected to the attendance system</p>
+            </div>
+
+            <div class="countdown-ring">
+                <span class="time">58m</span>
+            </div>
+            <p style="text-align:center; color:var(--text-muted); font-size:12px; margin-bottom:20px;">Session expires in</p>
+
+            <div class="card" style="margin-bottom:20px;">
+                <div class="session-detail-row">
+                    <span class="label">Course</span>
+                    <span class="value">CS101 — Intro to CS</span>
+                </div>
+                <div class="session-detail-row">
+                    <span class="label">Classroom</span>
+                    <span class="value">Room A — Building 3</span>
+                </div>
+                <div class="session-detail-row">
+                    <span class="label">Date</span>
+                    <span class="value">Mar 2, 2026</span>
+                </div>
+                <div class="session-detail-row">
+                    <span class="label">Time</span>
+                    <span class="value">10:00 AM — 11:30 AM</span>
+                </div>
+                <div class="session-detail-row">
+                    <span class="label">Student</span>
+                    <span class="value" style="color:var(--secondary);">STU-20231234</span>
+                </div>
+            </div>
+
+            <button class="btn btn-primary" onclick="goTo('seat-map')" style="margin-bottom:20px;">
+                Select My Seat →
+            </button>
+        </div>
+    </div>
+
+    <!-- ========== PAGE 5: SEAT MAP ========== -->
+    <div class="screen" id="seat-map">
+        <div class="seat-map-header">
+            <span class="title" style="font-size:18px; font-weight:700;">Select Your Seat</span>
+            <span class="badge badge-green">CS101</span>
+        </div>
+
+        <div class="front-label">▲ FRONT — Teacher's Desk ▲</div>
+
+        <div class="live-stats">
+            <div class="live-stat">
+                <div class="num">7</div>
+                <div class="lbl">Present</div>
+            </div>
+            <div class="live-stat">
+                <div class="num">20</div>
+                <div class="lbl">Total</div>
+            </div>
+            <div class="live-stat">
+                <div class="num">35%</div>
+                <div class="lbl">Attendance</div>
+            </div>
+        </div>
+
+        <div class="seat-grid" id="seatGrid">
+            <!-- Row A -->
+            <div class="row-label">A</div>
+            <div class="seat verified-other" data-id="A1"><span class="seat-id">A1</span><span class="seat-label">Taken</span></div>
+            <div class="seat verified-other" data-id="A2"><span class="seat-id">A2</span><span class="seat-label">Taken</span></div>
+            <div class="seat available" data-id="A3" onclick="selectSeat('A3')"><span class="seat-id">A3</span><span class="seat-label">Available</span></div>
+            <div class="seat occupied" data-id="A4"><span class="seat-id">A4</span><span class="seat-label">Taken</span></div>
+            <div class="seat available" data-id="A5" onclick="selectSeat('A5')"><span class="seat-id">A5</span><span class="seat-label">Available</span></div>
+            <!-- Row B -->
+            <div class="row-label">B</div>
+            <div class="seat available" data-id="B1" onclick="selectSeat('B1')"><span class="seat-id">B1</span><span class="seat-label">Available</span></div>
+            <div class="seat verified-other" data-id="B2"><span class="seat-id">B2</span><span class="seat-label">Taken</span></div>
+            <div class="seat available" data-id="B3" onclick="selectSeat('B3')"><span class="seat-id">B3</span><span class="seat-label">Available</span></div>
+            <div class="seat available" data-id="B4" onclick="selectSeat('B4')"><span class="seat-id">B4</span><span class="seat-label">Available</span></div>
+            <div class="seat verified-other" data-id="B5"><span class="seat-id">B5</span><span class="seat-label">Taken</span></div>
+            <!-- Row C -->
+            <div class="row-label">C</div>
+            <div class="seat verified-other" data-id="C1"><span class="seat-id">C1</span><span class="seat-label">Taken</span></div>
+            <div class="seat available" data-id="C2" onclick="selectSeat('C2')"><span class="seat-id">C2</span><span class="seat-label">Available</span></div>
+            <div class="seat scanning" data-id="C3"><span class="seat-id">C3</span><span class="seat-label">Verifying</span></div>
+            <div class="seat available" data-id="C4" onclick="selectSeat('C4')"><span class="seat-id">C4</span><span class="seat-label">Available</span></div>
+            <div class="seat available" data-id="C5" onclick="selectSeat('C5')"><span class="seat-id">C5</span><span class="seat-label">Available</span></div>
+            <!-- Row D -->
+            <div class="row-label">D</div>
+            <div class="seat available" data-id="D1" onclick="selectSeat('D1')"><span class="seat-id">D1</span><span class="seat-label">Available</span></div>
+            <div class="seat verified-other" data-id="D2"><span class="seat-id">D2</span><span class="seat-label">Taken</span></div>
+            <div class="seat available" data-id="D3" onclick="selectSeat('D3')"><span class="seat-id">D3</span><span class="seat-label">Available</span></div>
+            <div class="seat verified-mine" data-id="D4"><span class="seat-id">D4</span><span class="seat-label">Yours ✓</span></div>
+            <div class="seat available" data-id="D5" onclick="selectSeat('D5')"><span class="seat-id">D5</span><span class="seat-label">Available</span></div>
+        </div>
+
+        <div class="seat-legend">
+            <div class="legend-item"><div class="legend-dot" style="background:#444;"></div> Available</div>
+            <div class="legend-item"><div class="legend-dot" style="background:var(--secondary);"></div> Selected</div>
+            <div class="legend-item"><div class="legend-dot" style="background:var(--warning);"></div> Scanning</div>
+            <div class="legend-item"><div class="legend-dot" style="background:var(--primary);"></div> Verified</div>
+            <div class="legend-item"><div class="legend-dot" style="background:#5D3A3A;"></div> Occupied</div>
+        </div>
+
+        <!-- Bottom Sheet -->
+        <div class="bottom-sheet" id="seatSheet">
+            <div class="handle"></div>
+            <h3>Confirm Seat <span id="sheetSeatId">B3</span>?</h3>
+            <p class="sheet-sub">Row <span id="sheetRow">B</span>, Column <span id="sheetCol">3</span></p>
+            <button class="btn btn-primary" onclick="claimSeat()">Claim This Seat</button>
+            <button class="btn btn-secondary" onclick="closeSheet()" style="margin-top:8px;">Cancel</button>
+        </div>
+    </div>
+
+    <!-- ========== PAGE 6: RFID VERIFICATION ========== -->
+    <div class="screen" id="rfid-verify">
+        <div class="verify-seat-info">Verifying your presence at</div>
+        <div class="verify-seat-id">B3</div>
+
+        <div class="radar-container">
+            <div class="radar-ring r1"></div>
+            <div class="radar-ring r2"></div>
+            <div class="radar-ring r3"></div>
+            <div class="radar-center">📡</div>
+        </div>
+
+        <div class="servo-readout">
+            <div class="servo-val">
+                <div class="angle">90°</div>
+                <div class="axis">X-Axis</div>
+            </div>
+            <div class="servo-val">
+                <div class="angle">75°</div>
+                <div class="axis">Y-Axis</div>
+            </div>
+        </div>
+
+        <div class="verify-status" id="verifyStatus">Scanning for your RFID tag...</div>
+
+        <div class="countdown-bar"><div class="fill"></div></div>
+        <div class="countdown-label">5 second verification window</div>
+
+        <div style="width:100%; padding: 0 10px;">
+            <p style="font-size:13px; color:var(--text-muted); margin-bottom:16px;">
+                📌 Make sure your RFID tag is on your desk
+            </p>
+            <button class="btn btn-primary" onclick="simulateVerifySuccess()">Simulate: Tag Detected ✓</button>
+            <button class="btn btn-secondary" style="margin-top:8px;" onclick="simulateVerifyFail()">Simulate: Timeout ✗</button>
+        </div>
+    </div>
+
+    <!-- ========== PAGE 7: SUCCESS ========== -->
+    <div class="screen" id="success">
+        <div class="confetti" id="confettiContainer"></div>
+        <div class="success-check">✓</div>
+        <h1>Attendance Verified!</h1>
+        <p class="sub">Your presence has been confirmed</p>
+
+        <div class="receipt-card">
+            <div class="receipt-row">
+                <span class="rlbl">Seat</span>
+                <span class="rval">B3</span>
+            </div>
+            <div class="receipt-row">
+                <span class="rlbl">Time</span>
+                <span class="rval">10:32 AM</span>
+            </div>
+            <div class="receipt-row">
+                <span class="rlbl">Session</span>
+                <span class="rval">CS101-2026-03-02</span>
+            </div>
+            <div class="receipt-row">
+                <span class="rlbl">Status</span>
+                <span class="rval" style="color:var(--primary);">✓ Present</span>
+            </div>
+            <div class="receipt-row">
+                <span class="rlbl">RFID</span>
+                <span class="rval" style="font-size:11px; color:var(--text-muted);">E280117...6791</span>
+            </div>
+        </div>
+
+        <button class="btn btn-primary" onclick="goTo('dashboard')">Done</button>
+        <button class="btn btn-secondary" style="margin-top:10px;">📸 Save as Screenshot</button>
+    </div>
+
+    <!-- ========== PAGE 8: DASHBOARD ========== -->
+    <div class="screen" id="dashboard">
+        <div class="dash-header">
+            <div>
+                <h2>Dashboard</h2>
+                <p style="font-size:13px; color:var(--text-muted);">STU-20231234</p>
+            </div>
+            <div class="avatar">A</div>
+        </div>
+
+        <div class="current-session-card">
+            <div class="cs-top">
+                <span class="cs-course">CS101</span>
+                <span class="badge badge-green">✓ Verified</span>
+            </div>
+            <div style="font-size:13px; color:var(--text-secondary);">Today, 10:00 AM • Seat B3</div>
+        </div>
+
+        <div style="text-align:center; margin-bottom:4px; font-size:13px; color:var(--text-muted);">Overall Attendance</div>
+        <div class="donut-container">
+            <div class="donut">
+                <span class="pct">85%</span>
+            </div>
+        </div>
+
+        <div class="history-title">Recent Sessions</div>
+
+        <div class="history-item">
+            <div class="hi-icon present">✓</div>
+            <div class="hi-info">
+                <div class="hi-course">CS101 — Intro to CS</div>
+                <div class="hi-meta">Feb 28, 2026 • 10:00 AM</div>
+            </div>
+            <div class="hi-seat">A2</div>
+        </div>
+        <div class="history-item">
+            <div class="hi-icon present">✓</div>
+            <div class="hi-info">
+                <div class="hi-course">CS101 — Intro to CS</div>
+                <div class="hi-meta">Feb 25, 2026 • 10:00 AM</div>
+            </div>
+            <div class="hi-seat">B3</div>
+        </div>
+        <div class="history-item">
+            <div class="hi-icon absent">✗</div>
+            <div class="hi-info">
+                <div class="hi-course">CS101 — Intro to CS</div>
+                <div class="hi-meta">Feb 21, 2026 • 10:00 AM</div>
+            </div>
+            <div class="hi-seat" style="color:var(--error);">Absent</div>
+        </div>
+        <div class="history-item">
+            <div class="hi-icon present">✓</div>
+            <div class="hi-info">
+                <div class="hi-course">CS101 — Intro to CS</div>
+                <div class="hi-meta">Feb 18, 2026 • 10:00 AM</div>
+            </div>
+            <div class="hi-seat">C1</div>
+        </div>
+    </div>
+
+    <!-- ========== PAGE 9: ERROR STATES ========== -->
+    <div class="screen" id="errors">
+        <div class="top-bar">
+            <button class="back" onclick="goTo('dashboard')">←</button>
+            <span class="title">Error States</span>
+        </div>
+        <p style="padding:0 20px 12px; font-size:13px; color:var(--text-muted);">
+            Reference: all possible error/edge-case modals
+        </p>
+        <div style="padding: 0 20px; flex:1;" class="error-demo-grid">
+            <div class="error-card ec-expired">
+                <div class="ec-icon">⏰</div>
+                <div>
+                    <div class="ec-title">Session Expired</div>
+                    <div class="ec-desc">This session has ended. Ask your teacher to generate a new QR code.</div>
+                </div>
+            </div>
+            <div class="error-card ec-already">
+                <div class="ec-icon">ℹ️</div>
+                <div>
+                    <div class="ec-title">Already Verified</div>
+                    <div class="ec-desc">You've already been marked present for this session.</div>
+                </div>
+            </div>
+            <div class="error-card ec-busy">
+                <div class="ec-icon">⏳</div>
+                <div>
+                    <div class="ec-title">System Busy</div>
+                    <div class="ec-desc">Another student is being verified. Please wait ~5 seconds.</div>
+                </div>
+            </div>
+            <div class="error-card ec-taken">
+                <div class="ec-icon">🔒</div>
+                <div>
+                    <div class="ec-title">Seat Taken</div>
+                    <div class="ec-desc">Seat B3 is already claimed by another student.</div>
+                </div>
+            </div>
+            <div class="error-card ec-hw">
+                <div class="ec-icon">⚠️</div>
+                <div>
+                    <div class="ec-title">Hardware Unavailable</div>
+                    <div class="ec-desc">RFID reader not connected. Contact your instructor.</div>
+                </div>
+            </div>
+            <div class="error-card ec-net">
+                <div class="ec-icon">📡</div>
+                <div>
+                    <div class="ec-title">Network Error</div>
+                    <div class="ec-desc">Can't connect to the attendance system. Check your WiFi.</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- PAGE NAVIGATION -->
+<div class="page-nav">
+    <button class="active" onclick="goTo('splash')" id="nav-1">1</button>
+    <button onclick="goTo('login')" id="nav-2">2</button>
+    <button onclick="goTo('qr-scan')" id="nav-3">3</button>
+    <button onclick="goTo('session-confirm')" id="nav-4">4</button>
+    <button onclick="goTo('seat-map')" id="nav-5">5</button>
+    <button onclick="goTo('rfid-verify')" id="nav-6">6</button>
+    <button onclick="goTo('success')" id="nav-7">7</button>
+    <button onclick="goTo('dashboard')" id="nav-8">8</button>
+    <button onclick="goTo('errors')" id="nav-9">9</button>
+</div>
+
+<script>
+    const screenMap = {
+        'splash': 1, 'login': 2, 'qr-scan': 3, 'session-confirm': 4,
+        'seat-map': 5, 'rfid-verify': 6, 'success': 7, 'dashboard': 8, 'errors': 9
+    };
+
+    function goTo(screenId) {
+        // Hide all screens
+        document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+        // Show target
+        document.getElementById(screenId).classList.add('active');
+        // Update nav
+        document.querySelectorAll('.page-nav button').forEach(b => b.classList.remove('active'));
+        const navBtn = document.getElementById('nav-' + screenMap[screenId]);
+        if (navBtn) navBtn.classList.add('active');
+        // Trigger confetti on success page
+        if (screenId === 'success') spawnConfetti();
+    }
+
+    // QR Scanner simulation
+    function simulateQrScan() {
+        const overlay = document.getElementById('qrSuccess');
+        overlay.style.display = 'flex';
+        setTimeout(() => {
+            overlay.style.display = 'none';
+            goTo('session-confirm');
+        }, 1200);
+    }
+
+    function simulateQrError() {
+        const overlay = document.getElementById('qrError');
+        overlay.style.display = 'flex';
+        setTimeout(() => { overlay.style.display = 'none'; }, 2000);
+    }
+
+    // Seat selection
+    let selectedSeatEl = null;
+    function selectSeat(seatId) {
+        // Remove previous selection
+        if (selectedSeatEl) {
+            selectedSeatEl.classList.remove('selected');
+            selectedSeatEl.classList.add('available');
+            selectedSeatEl.querySelector('.seat-label').textContent = 'Available';
+        }
+        const el = document.querySelector(`.seat[data-id="${seatId}"]`);
+        el.classList.remove('available');
+        el.classList.add('selected');
+        el.querySelector('.seat-label').textContent = 'Selected';
+        selectedSeatEl = el;
+        // Open bottom sheet
+        const row = seatId.charAt(0);
+        const col = seatId.charAt(1);
+        document.getElementById('sheetSeatId').textContent = seatId;
+        document.getElementById('sheetRow').textContent = row;
+        document.getElementById('sheetCol').textContent = col;
+        document.getElementById('seatSheet').classList.add('open');
+    }
+
+    function closeSheet() {
+        document.getElementById('seatSheet').classList.remove('open');
+        if (selectedSeatEl) {
+            selectedSeatEl.classList.remove('selected');
+            selectedSeatEl.classList.add('available');
+            selectedSeatEl.querySelector('.seat-label').textContent = 'Available';
+            selectedSeatEl = null;
+        }
+    }
+
+    function claimSeat() {
+        document.getElementById('seatSheet').classList.remove('open');
+        if (selectedSeatEl) {
+            selectedSeatEl.classList.remove('selected');
+            selectedSeatEl.classList.add('scanning');
+            selectedSeatEl.querySelector('.seat-label').textContent = 'Verifying';
+        }
+        setTimeout(() => goTo('rfid-verify'), 800);
+    }
+
+    // RFID verify simulation
+    function simulateVerifySuccess() {
+        const status = document.getElementById('verifyStatus');
+        status.textContent = 'Tag detected! Verifying...';
+        status.style.color = 'var(--primary)';
+        setTimeout(() => {
+            goTo('success');
+            status.textContent = 'Scanning for your RFID tag...';
+            status.style.color = 'var(--warning)';
+        }, 1000);
+    }
+
+    function simulateVerifyFail() {
+        const status = document.getElementById('verifyStatus');
+        status.textContent = 'No tag detected. Try again?';
+        status.style.color = 'var(--error)';
+        setTimeout(() => {
+            status.textContent = 'Scanning for your RFID tag...';
+            status.style.color = 'var(--warning)';
+        }, 3000);
+    }
+
+    // Confetti
+    function spawnConfetti() {
+        const container = document.getElementById('confettiContainer');
+        container.innerHTML = '';
+        const colors = ['#4CAF50', '#2196F3', '#FFC107', '#E91E63', '#9C27B0', '#FF5722'];
+        for (let i = 0; i < 40; i++) {
+            const span = document.createElement('span');
+            span.style.left = Math.random() * 100 + '%';
+            span.style.background = colors[Math.floor(Math.random() * colors.length)];
+            span.style.animationDelay = Math.random() * 1 + 's';
+            span.style.animationDuration = (2 + Math.random() * 2) + 's';
+            container.appendChild(span);
+        }
+    }
+</script>
+
+</body>
+</html>

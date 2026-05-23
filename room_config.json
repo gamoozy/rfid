@@ -1,0 +1,15 @@
+{
+  "room_width_cm": 800,
+  "room_depth_cm": 600,
+
+  "motor1_cm_per_revolution": 8.0,
+  "motor2_cm_per_revolution": 8.0,
+
+  "steps_per_revolution": 1600,
+  "steps_per_press": 1,
+
+  "origin_offset_x_cm": 0.0,
+  "origin_offset_y_cm": 0.0,
+
+  "_comment": "Edit these values to match your room. motor1=X-axis (Left/Right), motor2=Y-axis (Up/Down). cm_per_revolution depends on your lead screw pitch (8mm pitch = 0.8cm per rev). With 1600 steps/rev: 200 steps = 1/8 revolution = 0.1cm travel (for 0.8cm pitch). Adjust as needed."
+}

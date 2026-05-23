@@ -1,0 +1,8 @@
+{
+  "motor1_steps": -60,
+  "motor2_steps": 0,
+  "x_cm": -0.3,
+  "y_cm": 0.0,
+  "last_updated": "2026-05-06T15:23:15.061104+03:00",
+  "last_direction": "M1 CW"
+}
