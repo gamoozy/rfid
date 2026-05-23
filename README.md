@@ -1,6 +1,6 @@
 # 🎓 Hybrid RFID-QR Attendance System
 
-A smart classroom attendance system that combines **UHF RFID tag detection** with **QR code verification** and **motorized positioning** (servo/stepper) to verify student seating. Built to run on a **Raspberry Pi A+** with an **R16-12DB UHF RFID Reader**.
+A smart classroom attendance system that combines **UHF RFID tag detection** with **QR code verification** and **motorized positioning** (stepper motors) to verify student seating. Runs on a **laptop (macOS)** with an **R16-12DB UHF RFID Reader** connected via USB, and an **ESP32** driving dual stepper motors.
 
 ---
 
@@ -44,7 +44,7 @@ The system works as follows:
 - ✅ Stepper motor position tracking (X/Y in cm)
 - ✅ Flask REST API for mobile dashboard access
 - ✅ QR code generation with HMAC signature verification
-- ✅ Servo and stepper motor control (Pi GPIO + ESP32)
+- ✅ Stepper motor control via ESP32 over serial
 - ✅ Auto-reconnect on serial disconnection
 - ✅ Classroom visualization and digital twin
 
@@ -54,30 +54,21 @@ The system works as follows:
 
 | Component | Details |
 |---|---|
-| **Raspberry Pi A+** | 512MB RAM, ARMv6, running Raspberry Pi OS Lite 32-bit |
-| **R16-12DB UHF RFID Reader** | Connected via USB-to-RS232 adapter |
-| **Servo Motors (×2)** | X/Y axis pan-tilt, connected to Pi GPIO 18 & 23 |
-| **Stepper Motors (×2)** | X/Y axis, driven via ESP32 |
-| **ESP32 Dev Board** | Controls stepper motors via serial commands |
+| **Laptop (macOS)** | Runs Python scripts, Flask server, and RFID reader control |
+| **R16-12DB UHF RFID Reader** | Connected to laptop via USB-to-RS232 adapter |
+| **ESP32 Dev Board** | Controls dual stepper motors, connected to laptop via USB serial |
+| **Stepper Motors (×2)** | X/Y axis positioning, driven by ESP32 |
 | **USB-RS232 Adapter** | For RFID reader connection |
-| **5V 2A Power Supply** | Separate PSU for servo/stepper motors |
+| **5V 2A Power Supply** | Separate PSU for stepper motors |
 
 ---
 
 ## Software Requirements
 
+- **macOS** (tested on Apple Silicon MacBook)
 - **Python** 3.7+
 - **pip** (Python package manager)
-- **Arduino IDE** or **PlatformIO** (for ESP32 firmware only)
-
-### System-Level Dependencies (Raspberry Pi only)
-
-```bash
-sudo apt-get install pigpio python3-pigpio
-sudo pigpiod   # start the GPIO daemon
-```
-
-> **Note:** `pigpio` is only needed on Raspberry Pi for servo control. On macOS/Linux development machines, the servo controller will fail gracefully.
+- **Arduino IDE** or **PlatformIO** (for flashing ESP32 firmware only)
 
 ---
 
@@ -111,17 +102,20 @@ This installs:
 | `flask-cors` | Cross-origin requests for mobile access |
 | `qrcode[pil]` + `Pillow` | QR code generation |
 | `pyserial` | Serial communication with RFID reader & ESP32 |
-| `pigpio` | Raspberry Pi GPIO for servo control |
 | `python-dateutil` | Date/time utilities |
+
+> **Note:** `pigpio` is listed in `requirements.txt` but only needed on Raspberry Pi. On macOS it will install but isn't used — the stepper motors are controlled via the ESP32 over serial instead.
 
 ### 4. Connect hardware
 
-1. Connect R16-12DB reader to USB-RS232 adapter
-2. Plug adapter into a USB port
-3. Verify connection:
+1. Connect R16-12DB reader to USB-RS232 adapter → plug into laptop USB
+2. Connect ESP32 to laptop via USB cable
+3. Verify connections:
    ```bash
-   ls /dev/cu.*        # macOS
-   ls /dev/ttyUSB*     # Linux / Raspberry Pi
+   ls /dev/cu.*
+   # You should see something like:
+   #   /dev/cu.usbserial-210    (RFID reader)
+   #   /dev/cu.usbserial-0001   (ESP32)
    ```
 
 ---
@@ -135,7 +129,7 @@ rfid/
 ├── reader_capture.py             # Single-tag RFID capture script
 ├── reader_capture_multi.py       # Multi-tag RFID capture script
 ├── rfid_reader.py                # RFID reader module
-├── servo_controller.py           # Servo motor control (Pi GPIO)
+├── servo_controller.py           # Servo motor control (legacy Pi GPIO)
 ├── servo_controller_esp32.py     # Servo control via ESP32
 ├── arrow_servo_control.py        # Manual servo control with arrow keys
 ├── manual_servo_control.py       # Manual servo positioning
@@ -166,8 +160,8 @@ rfid/
 ├── rfid_scans.csv                # CSV log (auto-created)
 │
 ├── ARCHITECTURE.md               # System architecture diagrams
-├── README_SETUP.md               # Raspberry Pi setup guide
-├── PI_A_PLUS_CONFIG.md           # Pi A+ specific configuration
+├── README_SETUP.md               # Setup guide
+├── PI_A_PLUS_CONFIG.md           # Pi A+ reference (legacy)
 ├── ESP32_SETUP.md                # ESP32 setup instructions
 ├── DIGITAL_TWIN_GUIDE.md         # Digital twin documentation
 ├── DIGITAL_TWIN_VISUAL.md        # Digital twin visual guide
@@ -218,7 +212,7 @@ python app.py
 
 Starts the REST API on `http://0.0.0.0:5000`. Access from:
 - Local: `http://localhost:5000`
-- Network: `http://<raspberry-pi-ip>:5000`
+- Network: `http://<your-laptop-ip>:5000`
 - Remote (via ngrok): `ngrok http 5000`
 
 ### Stepper Motor Control
@@ -381,13 +375,11 @@ sudo usermod -a -G dialout $USER
 3. Enable debug mode: `--debug`
 4. Consult the datasheet in `Datasheets/`
 
-### pigpiod not running (Raspberry Pi)
+### ESP32 not responding
 
-```bash
-sudo pigpiod
-# To auto-start on boot:
-sudo systemctl enable pigpiod
-```
+1. Check that the ESP32 is connected via USB and the correct port is set in `Stepper_control.py`
+2. Open Arduino IDE Serial Monitor at 115200 baud to verify the ESP32 is sending `READY`
+3. Make sure no other program (e.g., Serial Monitor) is holding the port open
 
 ---
 
